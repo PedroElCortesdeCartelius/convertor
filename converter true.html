@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CONVERT — Unit Converter</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=DM+Sans:wght@200;300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EDE4D8; --card:#E4D8C8; --card2:#D9CABB;
+  --border:#C4AE96; --border2:#B09880;
+  --taupe:#9A7E65; --mocha:#7A5C42; --espresso:#4A3220;
+  --accent:#C17A4A; --accent2:#A85E2F;
+  --blush:#D4A882; --sage:#8FA68A;
+  --note-1:#F0D8C0; --note-2:#D8E8D0; --note-3:#D8D0E8; --note-4:#E8D8D0;
+  --ink:#2A1E12;
+
+  /* shared row heights — keeps left & right perfectly aligned */
+  --row-field: 74px;   /* label (15px) + gap (5px) + input (54px) */
+  --row-plus:  28px;   /* ＋ separator */
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;font-weight:300;min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:999;opacity:0.55;}
+
+.blob{position:fixed;border-radius:50%;filter:blur(90px);pointer-events:none;z-index:0;animation:drift 14s ease-in-out infinite alternate;}
+.blob-1{width:520px;height:520px;background:radial-gradient(circle,#C17A4A30,transparent);top:-160px;right:-120px;}
+.blob-2{width:440px;height:440px;background:radial-gradient(circle,#8FA68A28,transparent);bottom:-120px;left:-100px;animation-delay:-7s;}
+.blob-3{width:300px;height:300px;background:radial-gradient(circle,#D4A88222,transparent);top:40%;left:50%;transform:translateX(-50%);animation-delay:-3s;}
+@keyframes drift{from{transform:translate(0,0)scale(1);}to{transform:translate(22px,16px)scale(1.05);}}
+
+/* ── PAGE ── */
+.wrap{display:grid;grid-template-columns:1fr 300px;gap:24px;max-width:1040px;margin:0 auto;padding:0 24px 56px;position:relative;z-index:1;align-items:start;}
+.main-col{min-width:0;}
+header{max-width:1040px;margin:0 auto;padding:44px 24px 0;display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1;margin-bottom:32px;}
+.logo{font-family:'Cormorant Garamond',serif;font-weight:300;font-size:14px;letter-spacing:0.4em;text-transform:uppercase;color:var(--accent);}
+.header-line{flex:1;height:1px;background:var(--border);margin:0 24px;opacity:0.5;}
+.header-meta{font-size:11px;letter-spacing:0.15em;color:var(--taupe);text-transform:uppercase;}
+
+/* ── HERO ── */
+.hero{padding:0 0 36px;text-align:center;}
+.hero-label{display:inline-block;font-size:10px;letter-spacing:0.4em;text-transform:uppercase;color:var(--taupe);margin-bottom:16px;padding:6px 18px;border:1px solid var(--border);border-radius:100px;background:rgba(255,255,255,0.15);}
+.hero h1{font-family:'Cormorant Garamond',serif;font-size:clamp(48px,8vw,80px);font-weight:300;line-height:1;letter-spacing:-0.02em;color:var(--espresso);margin-bottom:12px;}
+.hero h1 em{font-style:italic;color:var(--accent);}
+.hero-sub{font-size:13px;color:var(--taupe);letter-spacing:0.05em;}
+
+/* ── TOGGLE ── */
+.direction-toggle{display:flex;align-items:center;justify-content:center;margin:0 auto 28px;background:var(--card2);border-radius:100px;padding:4px;width:fit-content;border:1px solid var(--border);}
+.toggle-btn{background:transparent;border:none;cursor:pointer;padding:10px 26px;border-radius:100px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:300;letter-spacing:0.1em;color:var(--mocha);transition:all 0.35s cubic-bezier(0.4,0,0.2,1);white-space:nowrap;}
+.toggle-btn.active{background:var(--accent);color:#fff;box-shadow:0 2px 16px rgba(193,122,74,0.35);}
+
+/* ── CARD ── */
+.converter-card{background:var(--card);border:1px solid var(--border);border-radius:22px;padding:36px;position:relative;overflow:hidden;box-shadow:0 4px 32px rgba(74,50,32,0.08);}
+.converter-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,var(--accent),var(--blush),transparent);opacity:0.8;}
+
+/* ── HINT ── */
+.hint{font-size:11px;color:var(--taupe);letter-spacing:0.04em;margin-bottom:24px;line-height:1.75;padding:11px 15px;background:rgba(255,255,255,0.28);border-radius:10px;border:1px solid var(--border);}
+.hint strong{color:var(--mocha);font-weight:500;}
+
+/* ── COL HEADINGS ── */
+.col-heading{font-size:10px;letter-spacing:0.3em;text-transform:uppercase;color:var(--taupe);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+
+/* ════════════════════════════════════════
+   ALIGNED CONV GRID
+   Uses CSS Grid with explicit named rows so
+   every input sits at exactly the same height
+   as its corresponding result.
+
+   Row template (metric→imperial, 3 inputs):
+     "heading"   auto
+     "row1"      var(--row-field)
+     "plus1"     var(--row-plus)
+     "row2"      var(--row-field)
+     "plus2"     var(--row-plus)
+     "row3"      var(--row-field)
+     "sum"       auto
+════════════════════════════════════════ */
+.conv-grid{
+  display:grid;
+  grid-template-columns: 1fr 48px 1fr;
+  grid-template-rows:
+    [heading] auto
+    [row1]    var(--row-field)
+    [plus1]   var(--row-plus)
+    [row2]    var(--row-field)
+    [plus2]   var(--row-plus)
+    [row3]    var(--row-field)
+    [sum]     auto;
+  margin-bottom:28px;
+}
+
+/* headings */
+.ch-left  { grid-column:1; grid-row:heading; }
+.ch-right { grid-column:3; grid-row:heading; }
+
+/* arrow — spans row1 to row3, centred */
+.conv-arrow{
+  grid-column:2;
+  grid-row: row1 / span 5;   /* covers row1+plus1+row2+plus2+row3 */
+  display:flex; align-items:center; justify-content:center;
+}
+.arrow-circle{width:36px;height:36px;border-radius:50%;background:var(--card2);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--mocha);font-size:15px;}
+
+/* input rows */
+.inp-row1 { grid-column:1; grid-row:row1;  display:flex; flex-direction:column; justify-content:flex-start; }
+.inp-row2 { grid-column:1; grid-row:row2;  display:flex; flex-direction:column; justify-content:flex-start; }
+.inp-row3 { grid-column:1; grid-row:row3;  display:flex; flex-direction:column; justify-content:flex-start; }
+
+/* plus rows */
+.plus-row1{ grid-column:1; grid-row:plus1; display:flex; align-items:center; justify-content:center; font-size:15px; color:var(--border2); }
+.plus-row2{ grid-column:1; grid-row:plus2; display:flex; align-items:center; justify-content:center; font-size:15px; color:var(--border2); }
+
+/* sum preview */
+.sum-row  { grid-column:1; grid-row:sum; }
+
+/* result rows — same grid rows as inputs */
+.res-row1 { grid-column:3; grid-row:row1;  display:flex; flex-direction:column; justify-content:center; }
+.res-row2 { grid-column:3; grid-row:row2;  display:flex; flex-direction:column; justify-content:center; }
+.res-row3 { grid-column:3; grid-row:row3;  display:flex; flex-direction:column; justify-content:center; }
+
+/* 2-row variant (imperial: ft + in → m/cm/mm)
+   Row template:
+     "heading"  auto
+     "row1"     var(--row-field)
+     "plus1"    var(--row-plus)
+     "row2"     var(--row-field)
+     "sum"      auto
+     "row3"     var(--row-field)   ← 3rd result only
+*/
+.conv-grid-2{
+  display:grid;
+  grid-template-columns: 1fr 48px 1fr;
+  grid-template-rows:
+    [heading] auto
+    [row1]    var(--row-field)
+    [plus1]   var(--row-plus)
+    [row2]    var(--row-field)
+    [gap1]    14px
+    [row3]    var(--row-field);
+  margin-bottom:28px;
+}
+.conv-grid-2 .ch-left  { grid-column:1; grid-row:heading; }
+.conv-grid-2 .ch-right { grid-column:3; grid-row:heading; }
+.conv-grid-2 .conv-arrow{
+  grid-column:2;
+  grid-row: row1 / span 3;
+  display:flex; align-items:center; justify-content:center;
+}
+.conv-grid-2 .inp-row1  { grid-column:1; grid-row:row1; display:flex;flex-direction:column;justify-content:flex-start; }
+.conv-grid-2 .inp-row2  { grid-column:1; grid-row:row2; display:flex;flex-direction:column;justify-content:flex-start; }
+.conv-grid-2 .plus-row1 { grid-column:1; grid-row:plus1; display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--border2); }
+.conv-grid-2 .res-row1  { grid-column:3; grid-row:row1; display:flex;flex-direction:column;justify-content:center; }
+.conv-grid-2 .res-row2  { grid-column:3; grid-row:row2; display:flex;flex-direction:column;justify-content:center; }
+.conv-grid-2 .res-row3  { grid-column:3; grid-row:row3; display:flex;flex-direction:column;justify-content:center; }
+
+/* ── INPUT FIELD ── */
+.field{display:flex;flex-direction:column;gap:5px;}
+.field-lbl{font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:var(--taupe);}
+.field-wrap{position:relative;}
+.field-input{
+  background:rgba(255,255,255,0.48);
+  border:1.5px solid var(--border);
+  border-radius:11px;
+  padding:12px 48px 12px 15px;
+  font-family:'Cormorant Garamond',serif;
+  font-size:23px;font-weight:300;
+  color:var(--espresso);width:100%;
+  transition:all 0.28s ease;outline:none;
+  -moz-appearance:textfield;
+  height:54px;
+}
+.field-input::-webkit-inner-spin-button,.field-input::-webkit-outer-spin-button{-webkit-appearance:none;}
+.field-input:focus{border-color:var(--accent);background:rgba(255,255,255,0.75);box-shadow:0 0 0 3px rgba(193,122,74,0.13);}
+.field-input::placeholder{color:var(--border2);font-style:italic;font-size:20px;}
+.field-input.has-value{border-color:var(--accent);background:rgba(255,255,255,0.6);}
+.field-unit{position:absolute;right:13px;top:50%;transform:translateY(-50%);font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:var(--taupe);pointer-events:none;}
+
+/* ── SUM PREVIEW ── */
+.sum-preview{padding:8px 13px;background:rgba(193,122,74,0.09);border:1px solid rgba(193,122,74,0.35);border-radius:9px;font-size:11px;color:var(--mocha);letter-spacing:0.04em;display:none;margin-top:10px;}
+.sum-preview strong{font-family:'Cormorant Garamond',serif;font-size:17px;color:var(--espresso);font-weight:400;}
+
+/* ── RESULT FIELD ── */
+.result-field{background:rgba(255,255,255,0.32);border:1.5px solid var(--border);border-radius:11px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;transition:all 0.22s ease;height:54px;}
+.result-field:hover{border-color:var(--accent);background:rgba(255,255,255,0.52);transform:translateX(2px);}
+.result-field.primary{background:linear-gradient(135deg,rgba(193,122,74,0.11),rgba(212,168,130,0.18));border-color:var(--accent);}
+.res-left{display:flex;flex-direction:column;gap:2px;min-width:0;}
+.res-unit{font-size:9px;letter-spacing:0.22em;text-transform:uppercase;color:var(--taupe);}
+.res-val{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:300;color:var(--espresso);line-height:1;transition:all 0.28s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.res-val.pop{animation:popVal 0.42s cubic-bezier(0.4,0,0.2,1);}
+@keyframes popVal{0%{transform:scale(1);}38%{transform:scale(1.06);color:var(--accent);}100%{transform:scale(1);}}
+.save-btn{flex-shrink:0;background:none;border:1.5px solid var(--border);border-radius:7px;padding:5px 9px;font-size:10px;cursor:pointer;color:var(--taupe);transition:all 0.2s;font-family:'DM Sans',sans-serif;letter-spacing:0.05em;white-space:nowrap;}
+.save-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+/* ── PRESETS ── */
+.presets{padding-top:22px;border-top:1px solid var(--border);}
+.presets-lbl{font-size:9px;letter-spacing:0.35em;text-transform:uppercase;color:var(--taupe);margin-bottom:11px;}
+.chips{display:flex;flex-wrap:wrap;gap:6px;}
+.chip{background:rgba(255,255,255,0.35);border:1.5px solid var(--border);border-radius:100px;padding:5px 13px;font-size:11px;color:var(--mocha);cursor:pointer;transition:all 0.2s;letter-spacing:0.02em;}
+.chip:hover{background:var(--espresso);color:#fff;border-color:var(--espresso);}
+.btn-clear{display:block;width:100%;margin-top:14px;padding:12px;background:transparent;border:1.5px solid var(--border);border-radius:11px;font-family:'DM Sans',sans-serif;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:var(--taupe);cursor:pointer;transition:all 0.28s;}
+.btn-clear:hover{background:var(--card2);color:var(--espresso);}
+
+/* ── NOTES ── */
+.notes-panel{background:var(--card);border:1px solid var(--border);border-radius:22px;padding:28px 24px;box-shadow:0 4px 32px rgba(74,50,32,0.08);position:relative;overflow:hidden;}
+.notes-panel::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,var(--sage),var(--blush),transparent);opacity:0.7;}
+.notes-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+.notes-title{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:300;color:var(--espresso);}
+.notes-count{font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:var(--taupe);background:var(--card2);padding:3px 10px;border-radius:100px;border:1px solid var(--border);}
+.notes-empty{text-align:center;padding:28px 0;color:var(--border2);font-size:12px;letter-spacing:0.1em;line-height:1.9;}
+.notes-empty-icon{font-size:28px;margin-bottom:8px;opacity:0.5;}
+.notes-list{display:flex;flex-direction:column;gap:7px;max-height:480px;overflow-y:auto;}
+.notes-list::-webkit-scrollbar{width:3px;}
+.notes-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+.note-card{border-radius:11px;padding:12px 14px;display:flex;align-items:flex-start;justify-content:space-between;gap:8px;animation:noteIn 0.32s ease;border:1px solid rgba(196,174,150,0.2);}
+.note-card:nth-child(4n+1){background:var(--note-1);}
+.note-card:nth-child(4n+2){background:var(--note-2);}
+.note-card:nth-child(4n+3){background:var(--note-3);}
+.note-card:nth-child(4n+4){background:var(--note-4);}
+@keyframes noteIn{from{opacity:0;transform:translateX(10px);}to{opacity:1;transform:translateX(0);}}
+.note-body{flex:1;min-width:0;}
+.note-tag{font-size:9px;letter-spacing:0.25em;text-transform:uppercase;color:var(--taupe);margin-bottom:3px;}
+.note-val{font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--espresso);}
+.note-src{font-size:10px;color:var(--mocha);margin-top:2px;}
+.note-time{font-size:9px;color:var(--border2);margin-top:4px;}
+.note-del{background:none;border:none;cursor:pointer;color:var(--border2);font-size:12px;flex-shrink:0;transition:color 0.2s;}
+.note-del:hover{color:var(--accent2);}
+.notes-clear-all{margin-top:12px;width:100%;padding:9px;background:transparent;border:1.5px solid var(--border);border-radius:9px;font-family:'DM Sans',sans-serif;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:var(--taupe);cursor:pointer;transition:all 0.25s;}
+.notes-clear-all:hover{background:var(--card2);color:var(--espresso);}
+
+.section{display:none;}.section.active{display:block;}
+footer{max-width:1040px;margin:0 auto;padding:20px 24px 40px;display:flex;align-items:center;justify-content:center;gap:8px;opacity:0.38;position:relative;z-index:1;}
+footer span{font-size:11px;letter-spacing:0.15em;color:var(--taupe);}
+.footer-dot{width:3px;height:3px;background:var(--taupe);border-radius:50%;}
+.fi{opacity:0;transform:translateY(13px);animation:fadeUp 0.62s cubic-bezier(0.4,0,0.2,1) forwards;}
+.fi1{animation-delay:.05s;}.fi2{animation-delay:.14s;}.fi3{animation-delay:.22s;}.fi4{animation-delay:.30s;}
+@keyframes fadeUp{to{opacity:1;transform:translateY(0);}}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--espresso);color:#F0E8D8;padding:9px 20px;border-radius:100px;font-size:11px;letter-spacing:0.1em;opacity:0;pointer-events:none;z-index:1000;transition:all 0.32s cubic-bezier(0.4,0,0.2,1);white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+@media(max-width:700px){
+  .wrap{grid-template-columns:1fr;}
+  .notes-panel{position:static;}
+  .conv-grid,.conv-grid-2{grid-template-columns:1fr;grid-template-rows:none !important;}
+  .conv-grid>*,.conv-grid-2>*{grid-column:1 !important;grid-row:auto !important;height:auto !important;}
+  .conv-arrow,.conv-grid-2 .conv-arrow{display:none;}
+  .result-field{height:auto;}
+  .field-input{height:auto;}
+  .converter-card{padding:22px 16px;}
+}
+</style>
+</head>
+<body>
+
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+<div class="blob blob-3"></div>
+<div class="toast" id="toast"></div>
+
+<header class="fi fi1">
+  <div class="logo">Convert</div>
+  <div class="header-line"></div>
+  <div class="header-meta">Unit Converter</div>
+</header>
+
+<div style="max-width:1040px;margin:0 auto;padding:0 24px;position:relative;z-index:1;">
+  <div class="hero fi fi2">
+    <div class="hero-label">Metric · Imperial</div>
+    <h1>Measure<br><em>with ease</em></h1>
+    <p class="hero-sub">Seamless conversions for designers & architects</p>
+  </div>
+  <div class="direction-toggle fi fi3">
+    <button class="toggle-btn active" onclick="setDir('metric')">Metric → Imperial</button>
+    <button class="toggle-btn" onclick="setDir('imperial')">Imperial → Metric</button>
+  </div>
+</div>
+
+<div class="wrap">
+<div class="main-col">
+
+<!-- ══════════ METRIC → IMPERIAL ══════════ -->
+<div class="section active fi fi4" id="sec-metric">
+<div class="converter-card">
+
+  <div class="hint">
+    Введіть значення в <strong>одне або кілька</strong> полів — вони <strong>додаються</strong> разом.<br>
+    <span style="opacity:.72;">Наприклад: 2 m + 35 cm + 5 mm = 2.355 m</span>
+  </div>
+
+  <div class="conv-grid">
+
+    <!-- headings -->
+    <div class="ch-left col-heading">Введіть</div>
+    <div class="ch-right col-heading">Результат</div>
+
+    <!-- arrow -->
+    <div class="conv-arrow"><div class="arrow-circle">→</div></div>
+
+    <!-- row 1: Метри / Фути -->
+    <div class="inp-row1">
+      <div class="field">
+        <div class="field-lbl">Метри</div>
+        <div class="field-wrap">
+          <input class="field-input" id="inp-m" type="number" placeholder="0" min="0" step="any" oninput="fromMetric()">
+          <span class="field-unit">m</span>
+        </div>
+      </div>
+    </div>
+    <div class="res-row1">
+      <div class="result-field primary">
+        <div class="res-left">
+          <div class="res-unit">Фути (ft)</div>
+          <div class="res-val" id="r-ft">—</div>
+        </div>
+        <button class="save-btn" onclick="saveNote('r-ft','ft')">＋ save</button>
+      </div>
+    </div>
+
+    <!-- plus 1 -->
+    <div class="plus-row1">＋</div>
+
+    <!-- row 2: Сантиметри / Дюйми -->
+    <div class="inp-row2">
+      <div class="field">
+        <div class="field-lbl">Сантиметри</div>
+        <div class="field-wrap">
+          <input class="field-input" id="inp-cm" type="number" placeholder="0" min="0" step="any" oninput="fromMetric()">
+          <span class="field-unit">cm</span>
+        </div>
+      </div>
+    </div>
+    <div class="res-row2">
+      <div class="result-field">
+        <div class="res-left">
+          <div class="res-unit">Дюйми (in)</div>
+          <div class="res-val" id="r-in">—</div>
+        </div>
+        <button class="save-btn" onclick="saveNote('r-in','in')">＋ save</button>
+      </div>
+    </div>
+
+    <!-- plus 2 -->
+    <div class="plus-row2">＋</div>
+
+    <!-- row 3: Міліметри / Фут+Дюйм -->
+    <div class="inp-row3">
+      <div class="field">
+        <div class="field-lbl">Міліметри</div>
+        <div class="field-wrap">
+          <input class="field-input" id="inp-mm" type="number" placeholder="0" min="0" step="any" oninput="fromMetric()">
+          <span class="field-unit">mm</span>
+        </div>
+      </div>
+    </div>
+    <div class="res-row3">
+      <div class="result-field">
+        <div class="res-left">
+          <div class="res-unit">Фут + дюйм</div>
+          <div class="res-val" id="r-ftin" style="font-size:19px;">—</div>
+        </div>
+        <button class="save-btn" onclick="saveNote('r-ftin','ft+in')">＋ save</button>
+      </div>
+    </div>
+
+    <!-- sum preview -->
+    <div class="sum-row">
+      <div class="sum-preview" id="m-sum-preview">
+        Разом: <strong id="m-sum-val"></strong>
+      </div>
+    </div>
+
+  </div><!-- /conv-grid -->
+
+  <div class="presets">
+    <div class="presets-lbl">Швидкий вибір</div>
+    <div class="chips">
+      <div class="chip" onclick="qm(0,10,0)">10 cm</div>
+      <div class="chip" onclick="qm(0,30,0)">30 cm</div>
+      <div class="chip" onclick="qm(0,60,0)">60 cm</div>
+      <div class="chip" onclick="qm(1,0,0)">1 m</div>
+      <div class="chip" onclick="qm(1,20,0)">1 m 20 cm</div>
+      <div class="chip" onclick="qm(2,40,0)">2 m 40 cm</div>
+      <div class="chip" onclick="qm(3,0,0)">3 m</div>
+      <div class="chip" onclick="qm(3,60,0)">3 m 60 cm</div>
+      <div class="chip" onclick="qm(0,0,254)">254 mm</div>
+    </div>
+  </div>
+  <button class="btn-clear" onclick="clearM()">Очистити</button>
+
+</div><!-- /card -->
+</div><!-- /sec-metric -->
+
+<!-- ══════════ IMPERIAL → METRIC ══════════ -->
+<div class="section fi fi4" id="sec-imperial">
+<div class="converter-card">
+
+  <div class="hint">
+    Введіть фути та дюйми окремо — вони <strong>додаються</strong> разом.<br>
+    <span style="opacity:.72;">Наприклад: 5 ft + 11 in = 5′ 11″</span>
+  </div>
+
+  <div class="conv-grid-2">
+
+    <!-- headings -->
+    <div class="ch-left col-heading">Введіть</div>
+    <div class="ch-right col-heading">Результат</div>
+
+    <!-- arrow -->
+    <div class="conv-arrow"><div class="arrow-circle">→</div></div>
+
+    <!-- row 1: Фути / Метри -->
+    <div class="inp-row1">
+      <div class="field">
+        <div class="field-lbl">Фути</div>
+        <div class="field-wrap">
+          <input class="field-input" id="inp-ft" type="number" placeholder="0" min="0" step="any" oninput="fromImperial()">
+          <span class="field-unit">ft</span>
+        </div>
+      </div>
+    </div>
+    <div class="res-row1">
+      <div class="result-field primary">
+        <div class="res-left">
+          <div class="res-unit">Метри (m)</div>
+          <div class="res-val" id="r-m">—</div>
+        </div>
+        <button class="save-btn" onclick="saveNote('r-m','m')">＋ save</button>
+      </div>
+    </div>
+
+    <!-- plus 1 -->
+    <div class="plus-row1">＋</div>
+
+    <!-- row 2: Дюйми / Сантиметри -->
+    <div class="inp-row2">
+      <div class="field">
+        <div class="field-lbl">Дюйми</div>
+        <div class="field-wrap">
+          <input class="field-input" id="inp-in" type="number" placeholder="0" min="0" step="any" oninput="fromImperial()">
+          <span class="field-unit">in</span>
+        </div>
+      </div>
+    </div>
+    <div class="res-row2">
+      <div class="result-field">
+        <div class="res-left">
+          <div class="res-unit">Сантиметри (cm)</div>
+          <div class="res-val" id="r-cm">—</div>
+        </div>
+        <button class="save-btn" onclick="saveNote('r-cm','cm')">＋ save</button>
+      </div>
+    </div>
+
+    <!-- row 3: (empty left) / Міліметри -->
+    <div class="res-row3">
+      <div class="result-field">
+        <div class="res-left">
+          <div class="res-unit">Міліметри (mm)</div>
+          <div class="res-val" id="r-mm">—</div>
+        </div>
+        <button class="save-btn" onclick="saveNote('r-mm','mm')">＋ save</button>
+      </div>
+    </div>
+
+  </div><!-- /conv-grid-2 -->
+
+  <div class="presets">
+    <div class="presets-lbl">Швидкий вибір</div>
+    <div class="chips">
+      <div class="chip" onclick="qi(0,1)">1″</div>
+      <div class="chip" onclick="qi(0,6)">6″</div>
+      <div class="chip" onclick="qi(0,12)">12″</div>
+      <div class="chip" onclick="qi(1,0)">1′</div>
+      <div class="chip" onclick="qi(3,0)">3′</div>
+      <div class="chip" onclick="qi(4,0)">4′</div>
+      <div class="chip" onclick="qi(6,0)">6′</div>
+      <div class="chip" onclick="qi(8,0)">8′</div>
+      <div class="chip" onclick="qi(10,0)">10′</div>
+      <div class="chip" onclick="qi(5,11)">5′ 11″</div>
+    </div>
+  </div>
+  <button class="btn-clear" onclick="clearI()">Очистити</button>
+
+</div><!-- /card -->
+</div><!-- /sec-imperial -->
+
+</div><!-- /main-col -->
+
+<!-- ══════════ NOTES ══════════ -->
+<div class="notes-panel fi fi4">
+  <div class="notes-header">
+    <div class="notes-title">Нотатки</div>
+    <div class="notes-count" id="notes-count">0</div>
+  </div>
+  <div id="notes-empty" class="notes-empty">
+    <div class="notes-empty-icon">📋</div>
+    Натисніть «＋ save»<br>поруч із результатом
+  </div>
+  <div id="notes-list" class="notes-list" style="display:none;"></div>
+  <button class="notes-clear-all" id="notes-clear-btn" onclick="clearNotes()" style="display:none;">Очистити все</button>
+</div>
+
+</div><!-- /wrap -->
+
+<footer>
+  <span>Made with precision</span>
+  <div class="footer-dot"></div>
+  <span>For designers</span>
+  <div class="footer-dot"></div>
+  <span>© 2025</span>
+</footer>
+
+<script>
+/* ══════════════════════════════════════
+   UTILS — max 3 decimal places
+══════════════════════════════════════ */
+function r3(n) {
+  // Round to max 3 decimal places, strip trailing zeros
+  return parseFloat(n.toFixed(3));
+}
+function fmt(n) {
+  return r3(n).toString();
+}
+function getVal(id) {
+  const v = parseFloat(document.getElementById(id).value);
+  return isNaN(v) ? 0 : v;
+}
+function isFilled(id) {
+  const s = document.getElementById(id).value.trim();
+  return s !== '' && parseFloat(s) !== 0 && !isNaN(parseFloat(s));
+}
+
+/* ══════════════════════════════════════
+   STATE
+══════════════════════════════════════ */
+let curDir = 'metric', notes = [];
+const M_TO_IN = 39.3701;
+const IN_TO_M = 0.0254;
+
+function setDir(d) {
+  curDir = d;
+  document.querySelectorAll('.toggle-btn').forEach((b,i) =>
+    b.classList.toggle('active', (d==='metric'&&i===0)||(d==='imperial'&&i===1))
+  );
+  document.getElementById('sec-metric').classList.toggle('active', d==='metric');
+  document.getElementById('sec-imperial').classList.toggle('active', d==='imperial');
+}
+
+/* ══════════════════════════════════════
+   METRIC → IMPERIAL
+   m, cm, mm are independent — all summed
+══════════════════════════════════════ */
+function fromMetric() {
+  const m  = getVal('inp-m');
+  const cm = getVal('inp-cm');
+  const mm = getVal('inp-mm');
+
+  // Highlight filled fields
+  ['inp-m','inp-cm','inp-mm'].forEach(id =>
+    document.getElementById(id).classList.toggle('has-value', isFilled(id))
+  );
+
+  const anyFilled = isFilled('inp-m') || isFilled('inp-cm') || isFilled('inp-mm');
+  if (!anyFilled) { clearMResults(); hideSumM(); return; }
+
+  // Total metres = sum of all three independently
+  const totalM = m + (cm / 100) + (mm / 1000);
+
+  // Show sum hint when 2+ fields are used
+  const filledCount = ['inp-m','inp-cm','inp-mm'].filter(isFilled).length;
+  if (filledCount >= 2) {
+    document.getElementById('m-sum-preview').style.display = 'block';
+    document.getElementById('m-sum-val').textContent = fmt(totalM) + ' m';
+  } else {
+    hideSumM();
+  }
+
+  // Convert — all results max 3 dp
+  const totalIn = totalM * M_TO_IN;
+  const ftWhole = Math.floor(totalIn / 12);
+  const inRem   = totalIn % 12;
+
+  setRes('r-ft',   fmt(totalIn / 12) + ' ft');
+  setRes('r-in',   fmt(totalIn) + ' in');
+  setRes('r-ftin', ftWhole + '′ ' + fmt(inRem) + '″');
+}
+
+/* ══════════════════════════════════════
+   IMPERIAL → METRIC
+   ft + in are independent — summed
+══════════════════════════════════════ */
+function fromImperial() {
+  const ft   = getVal('inp-ft');
+  const inch = getVal('inp-in');
+
+  ['inp-ft','inp-in'].forEach(id =>
+    document.getElementById(id).classList.toggle('has-value', isFilled(id))
+  );
+
+  if (!isFilled('inp-ft') && !isFilled('inp-in')) { clearIResults(); return; }
+
+  const totalM = (ft * 12 + inch) * IN_TO_M;
+
+  setRes('r-m',  fmt(totalM) + ' m');
+  setRes('r-cm', fmt(totalM * 100) + ' cm');
+  setRes('r-mm', fmt(totalM * 1000) + ' mm');
+}
+
+/* ══════════════════════════════════════
+   HELPERS
+══════════════════════════════════════ */
+function setRes(id, val) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = val;
+  el.classList.remove('pop');
+  void el.offsetWidth;
+  el.classList.add('pop');
+}
+
+function hideSumM() {
+  document.getElementById('m-sum-preview').style.display = 'none';
+}
+
+// Presets — pass m, cm, mm as separate values
+function qm(m, cm, mm) {
+  document.getElementById('inp-m').value  = m  || '';
+  document.getElementById('inp-cm').value = cm || '';
+  document.getElementById('inp-mm').value = mm || '';
+  fromMetric();
+}
+function qi(ft, inch) {
+  document.getElementById('inp-ft').value = ft   || '';
+  document.getElementById('inp-in').value = inch || '';
+  fromImperial();
+}
+
+function clearMResults() {
+  ['r-ft','r-in','r-ftin'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = '—';
+  });
+}
+function clearIResults() {
+  ['r-m','r-cm','r-mm'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = '—';
+  });
+}
+function clearM() {
+  ['inp-m','inp-cm','inp-mm'].forEach(id => {
+    const el = document.getElementById(id);
+    el.value = ''; el.classList.remove('has-value');
+  });
+  clearMResults(); hideSumM();
+}
+function clearI() {
+  ['inp-ft','inp-in'].forEach(id => {
+    const el = document.getElementById(id);
+    el.value = ''; el.classList.remove('has-value');
+  });
+  clearIResults();
+}
+
+/* ══════════════════════════════════════
+   NOTES
+══════════════════════════════════════ */
+function saveNote(resId, label) {
+  const el = document.getElementById(resId);
+  if (!el || el.textContent === '—') return;
+  const parts = [];
+  if (curDir === 'metric') {
+    if (isFilled('inp-m'))  parts.push(getVal('inp-m')  + ' m');
+    if (isFilled('inp-cm')) parts.push(getVal('inp-cm') + ' cm');
+    if (isFilled('inp-mm')) parts.push(getVal('inp-mm') + ' mm');
+  } else {
+    if (isFilled('inp-ft')) parts.push(getVal('inp-ft') + 'ft');
+    if (isFilled('inp-in')) parts.push(getVal('inp-in') + 'in');
+  }
+  notes.unshift({
+    id: Date.now(), label,
+    from: parts.join(' + '),
+    to: el.textContent,
+    time: new Date().toLocaleTimeString('uk-UA',{hour:'2-digit',minute:'2-digit'})
+  });
+  renderNotes(); showToast('Збережено ✓');
+}
+function deleteNote(id) { notes = notes.filter(n => n.id !== id); renderNotes(); }
+function clearNotes()   { notes = []; renderNotes(); }
+function renderNotes() {
+  const list  = document.getElementById('notes-list');
+  const empty = document.getElementById('notes-empty');
+  const btn   = document.getElementById('notes-clear-btn');
+  const count = document.getElementById('notes-count');
+  count.textContent = notes.length;
+  if (!notes.length) {
+    list.style.display='none'; empty.style.display='block'; btn.style.display='none'; return;
+  }
+  empty.style.display='none'; list.style.display='flex'; btn.style.display='block';
+  list.innerHTML = notes.map(n => `
+    <div class="note-card">
+      <div class="note-body">
+        <div class="note-tag">${n.label}</div>
+        <div class="note-val">${n.to}</div>
+        <div class="note-src">← ${n.from || '—'}</div>
+        <div class="note-time">${n.time}</div>
+      </div>
+      <button class="note-del" onclick="deleteNote(${n.id})">✕</button>
+    </div>`).join('');
+}
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
+}
+</script>
+</body>
+</html>
